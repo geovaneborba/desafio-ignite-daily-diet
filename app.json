@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ignite-gym",
-    "slug": "ignite-gym",
+    "name": "daily-diet",
+    "slug": "daily-diet",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +21,27 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.geovaneborba.dailydiet"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6cbac123-210c-45e8-9604-2300588680b3"
+      }
     }
   }
 }
