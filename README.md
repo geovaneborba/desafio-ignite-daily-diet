@@ -1,4 +1,4 @@
-<img src="./assets/daily-diet.png" alt="Imagem do banner coffee delivery" />
+<img src="./assets/daily-diet.png" alt="Imagem do banner daily diet" />
 
 <p align="center">
   <img alt="Repo size"  src="https://img.shields.io/github/repo-size/geovaneborba/ignite-daily-diet?color=4f46e5&style=for-the-badge">
