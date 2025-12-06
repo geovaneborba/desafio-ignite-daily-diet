@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Alert, Image, Pressable, SectionList, View, Text } from 'react-native'
+import { Image, Pressable, SectionList } from 'react-native'
 import { useTheme } from 'styled-components/native'
 import * as ImagePicker from 'expo-image-picker'
 import { TouchableOpacity } from 'react-native'
@@ -34,9 +34,9 @@ import { MealDTO } from '@dtos/MealDTO'
 
 import Toast from 'react-native-toast-message'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { MEALS_COLLECTION, USER_COLLECTION } from '@storage/storageConfig'
+import { MEALS_COLLECTION } from '@storage/storageConfig'
 import { createNewUserAvatar, getUserAvatar } from '@storage/userAvatar'
-import { NavigationHandler, RootStackParamList } from '@routes/app.routes'
+import { NavigationHandler } from '@routes/app.routes'
 
 type MealsData = {
   [key: string]: {
@@ -65,6 +65,10 @@ export function Home() {
   const { colors } = useTheme()
   const navigation = useNavigation()
 
+  const handleNavigate: NavigationHandler = (screenName, params?) => {
+    navigation.navigate(screenName, params)
+  }
+
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -85,19 +89,18 @@ export function Home() {
     }
   }
 
-  const handleNavigate: NavigationHandler = (screenName, params?) => {
-    navigation.navigate(screenName, params)
-  }
-
   const fetchData = async () => {
     const storageMeals = await getAllMeals()
 
     const groupedMeals = storageMeals.reduce(
       (acc: MealsData, meal: MealDTO) => {
-        const title = formatDateToString(new Date(meal.created_at))
+        const title = formatDateToString(new Date(meal.createdAt))
 
         if (!acc[title]) {
-          acc[title] = { title, data: [] }
+          acc[title] = {
+            title,
+            data: [],
+          }
         }
 
         acc[title].data.push(meal)
