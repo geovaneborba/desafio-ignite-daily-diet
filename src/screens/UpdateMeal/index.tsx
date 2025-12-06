@@ -1,50 +1,42 @@
-import {
-  useFocusEffect,
-  useNavigation,
-  useRoute,
-} from '@react-navigation/native'
+import { useNavigation, useRoute } from '@react-navigation/native'
 
 import {
   Container,
-  Content,
   Form,
-  FormGroup,
   FormGroupPicker,
   FormWrapper,
-  Input,
   Label,
   ScrollableView,
 } from './styles'
 
-import DateTimePicker from '@react-native-community/datetimepicker'
-import { useCallback, useEffect, useState } from 'react'
-import { Alert, Pressable, ScrollView } from 'react-native'
+import { useEffect, useState } from 'react'
 import { Button } from '../../components/Button'
-import { ButtonDiet } from '../../components/ButtonDiet'
 
 import { ScreenHeader } from '../../components/ScreenHeader'
 import { MealDTO } from '@dtos/MealDTO'
 import { getMealById, updateMealById } from '@storage/meal'
 
-import { formatDateToString } from '@utils/format-date-to-string'
-
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { formatTimeToString } from '@utils/format-time-to-string'
-import { Controller, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { Loading } from '@components/Loading'
-import { InputErrorText } from '@components/InputErrorText'
-import { NavigationHandler, RootStackParamList } from '@routes/app.routes'
-
-type UpdateMealForm = yup.InferType<typeof updateMealSchema>
+import { ControlledInput } from '@components/ControlledInput'
+import { ControlledDateTimePicker } from '@components/ControlledDateTimePicker'
+import { ControlledDietSelector } from '@components/ControlledDietSelector'
 
 const updateMealSchema = yup.object({
+  id: yup.string().uuid(),
   name: yup.string().required('Informe o nome da refeição'),
   description: yup.string(),
   date: yup.date().required('Informe uma data'),
   hour: yup.date().required('Informe um horário'),
-  diet: yup.string().required('Escolha uma opção').oneOf(['inside', 'outside']),
+  diet: yup
+    .string()
+    .required('Escolha uma opção')
+    .oneOf(['inside', 'outside'], 'Escolha uma opção'),
 })
+
+type UpdateMealFormData = yup.InferType<typeof updateMealSchema>
 
 type RouteParamsProps = {
   mealId: string
@@ -58,9 +50,8 @@ export function UpdateMeal() {
     handleSubmit,
     setValue,
     clearErrors,
-
     formState: { errors },
-  } = useForm<UpdateMealForm>({
+  } = useForm<UpdateMealFormData>({
     resolver: yupResolver(updateMealSchema),
   })
 
@@ -69,49 +60,9 @@ export function UpdateMeal() {
 
   const navigation = useNavigation()
 
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [date, setDate] = useState(new Date())
-
-  const [showTimePicker, setShowTimePicker] = useState(false)
-  const [time, setTime] = useState(new Date())
-
-  const handleTogglePicker = (type: 'datepicker' | 'timepicker') => {
-    return type === 'datepicker'
-      ? setShowDatePicker((state) => !state)
-      : setShowTimePicker((state) => !state)
-  }
-
-  const handleNavigate: NavigationHandler = (screenName, params?) => {
-    navigation.navigate(screenName, params)
-  }
-
-  const handleDateChange = (event, selectedDate) => {
-    if (event.type === 'set') {
-      const currentDate = selectedDate || date
-
-      setShowDatePicker(false)
-      setDate(currentDate)
-      setValue('date', currentDate)
-    } else {
-      setShowDatePicker(false)
-    }
-  }
-
-  const handleTimeChange = (event, selectedTime) => {
-    if (event.type === 'set') {
-      const currentTime = selectedTime || time
-
-      setShowTimePicker(false)
-      setTime(currentTime)
-      setValue('hour', currentTime)
-    } else {
-      setShowTimePicker(false)
-    }
-  }
-
-  const handleUpdate = async (data: MealDTO) => {
+  const handleUpdate = async (data: Partial<MealDTO>) => {
     try {
-      const updateMeal: MealDTO = {
+      const updateMeal: Partial<MealDTO> = {
         ...data,
       }
 
@@ -129,9 +80,12 @@ export function UpdateMeal() {
       const meal = await getMealById(mealId)
 
       if (meal) {
-        for (const [key, value] of Object.entries(meal)) {
-          setValue(key, value)
-        }
+        setValue('id', meal.id)
+        setValue('name', meal.name)
+        setValue('description', meal.description)
+        setValue('date', meal.date)
+        setValue('hour', meal.hour)
+        setValue('diet', meal.diet)
       }
     } catch (error) {
       console.log(error)
@@ -148,7 +102,7 @@ export function UpdateMeal() {
     <ScrollableView showsVerticalScrollIndicator={false}>
       <Container>
         <ScreenHeader
-          onNavigate={() => handleNavigate('home')}
+          onNavigate={() => navigation.navigate('home')}
           title="Editar Refeição"
           variant="base"
         />
@@ -157,128 +111,49 @@ export function UpdateMeal() {
           <Loading />
         ) : (
           <Form>
-            <FormGroup>
-              <Label>Nome</Label>
-              <Controller
-                control={control}
-                name="name"
-                render={({ field: { onChange, value } }) => (
-                  <>
-                    <Input value={value} onChangeText={onChange} />
-                    {errors.name && (
-                      <InputErrorText>{errors.name.message}</InputErrorText>
-                    )}
-                  </>
-                )}
-              />
-            </FormGroup>
+            <ControlledInput
+              control={control}
+              name="name"
+              label="Nome"
+              error={errors.name}
+            />
 
-            <FormGroup>
-              <Label>Descrição</Label>
-              <Controller
-                control={control}
-                name="description"
-                render={({ field: { onChange, value } }) => (
-                  <Input
-                    value={value}
-                    onChangeText={onChange}
-                    multiline={true}
-                    numberOfLines={4}
-                  />
-                )}
-              />
-            </FormGroup>
+            <ControlledInput
+              control={control}
+              name="description"
+              label="Descrição"
+              error={errors.description}
+              placeholder="opcional"
+            />
 
             <FormWrapper>
               <FormGroupPicker>
                 <Label>Data</Label>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    mode="date"
-                    display="spinner"
-                    value={date}
-                    onChange={handleDateChange}
-                  />
-                )}
-                <Pressable onPress={() => handleTogglePicker('datepicker')}>
-                  <Controller
-                    control={control}
-                    name="date"
-                    render={({ field: { value } }) => (
-                      <Input
-                        editable={false}
-                        value={formatDateToString(new Date(value))}
-                      />
-                    )}
-                  />
-                </Pressable>
+                <ControlledDateTimePicker
+                  control={control}
+                  name="date"
+                  mode="date"
+                  error={errors.date}
+                />
               </FormGroupPicker>
 
               <FormGroupPicker>
                 <Label>Hora</Label>
-
-                {showTimePicker && (
-                  <DateTimePicker
-                    mode="time"
-                    display="spinner"
-                    value={time}
-                    onChange={handleTimeChange}
-                  />
-                )}
-
-                <Pressable onPress={() => handleTogglePicker('timepicker')}>
-                  <Controller
-                    control={control}
-                    name="hour"
-                    render={({ field: { value } }) => (
-                      <Input
-                        editable={false}
-                        value={formatTimeToString(new Date(value))}
-                      />
-                    )}
-                  />
-                </Pressable>
+                <ControlledDateTimePicker
+                  control={control}
+                  name="hour"
+                  mode="time"
+                  error={errors.hour}
+                />
               </FormGroupPicker>
             </FormWrapper>
 
-            <FormGroup>
-              <Label>Está dentro da dieta?</Label>
-
-              <FormWrapper style={{ gap: 8 }}>
-                <Controller
-                  control={control}
-                  name="diet"
-                  render={({ field: { value } }) => (
-                    <ButtonDiet
-                      type="primary"
-                      title="Sim"
-                      onPress={() => {
-                        setValue('diet', 'inside')
-                        clearErrors('diet')
-                      }}
-                      options={value === 'inside' ? 'inside' : null}
-                    />
-                  )}
-                />
-
-                <Controller
-                  control={control}
-                  name="diet"
-                  render={({ field: { value } }) => (
-                    <ButtonDiet
-                      type="secondary"
-                      title="Não"
-                      onPress={() => {
-                        setValue('diet', 'outside')
-                        clearErrors('diet')
-                      }}
-                      options={value === 'outside' ? 'outside' : null}
-                    />
-                  )}
-                />
-              </FormWrapper>
-            </FormGroup>
+            <ControlledDietSelector
+              control={control}
+              name="diet"
+              label="Está dentro da dieta?"
+              error={errors.diet}
+            />
 
             <Button
               title="Salvar alterações"
