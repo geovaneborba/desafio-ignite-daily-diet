@@ -1,79 +1,87 @@
 import { View } from 'react-native'
-import { StatisticCard } from '../../components/StatisticCard'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { useCallback, useState } from 'react'
+
+import { StatisticCard } from '@components/StatisticCard'
+import { ScreenHeader } from '@components/ScreenHeader'
+import { Wrapper } from '@components/StatisticCard/styles'
+
+import { getAllMeals } from '@storage/meal'
+import { MealDTO } from '@dtos/MealDTO'
+import { MealStatisticDTO } from '@dtos/MealStatisticDTO'
+import { formatTotalMealsDiet } from '@utils/format-total-meals-diet'
+
 import {
   Container,
   Statistics,
   StatisticsContainer,
   StatisticsTitle,
 } from './styles'
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import { Wrapper } from '../../components/StatisticCard/styles'
-import { useCallback, useState } from 'react'
-import { getAllMeals } from '@storage/meal'
-import { MealDTO } from '@dtos/MealDTO'
-import { ScreenHeader } from '@components/ScreenHeader'
-import { MealStatisticDTO } from '@dtos/MealStatisticDTO'
-import { formatTotalMealsDiet } from '@utils/format-total-meals-diet'
-import { NavigationHandler, RootStackParamList } from '@routes/app.routes'
 
 export function Statistic() {
   const [statistics, setStatistics] = useState<MealStatisticDTO>(
     {} as MealStatisticDTO
   )
-
   const navigation = useNavigation()
 
-  const handleNavigate: NavigationHandler = (screenName, params?) => {
-    navigation.navigate(screenName, params)
+  const calculateStatistics = (meals: MealDTO[]): MealStatisticDTO => {
+    return meals.reduce(
+      (accumulator: MealStatisticDTO, meal: MealDTO) => {
+        const isInsideDiet = meal.diet === 'inside'
+
+        if (isInsideDiet) {
+          accumulator.mealsInsideDiet += 1
+          accumulator.currentSequence += 1
+          accumulator.bestSequence = Math.max(
+            accumulator.bestSequence,
+            accumulator.currentSequence
+          )
+        } else {
+          accumulator.mealsOutsideDiet += 1
+          accumulator.bestSequence = Math.max(
+            accumulator.bestSequence,
+            accumulator.currentSequence
+          )
+          accumulator.currentSequence = 0
+        }
+
+        accumulator.totalMeals += 1
+
+        return accumulator
+      },
+      {
+        mealsOutsideDiet: 0,
+        mealsInsideDiet: 0,
+        totalMeals: 0,
+        currentSequence: 0,
+        bestSequence: 0,
+      } as MealStatisticDTO
+    )
+  }
+
+  const fetchStatistics = useCallback(async () => {
+    const meals = await getAllMeals()
+    const calculatedStatistics = calculateStatistics(meals)
+    setStatistics(calculatedStatistics)
+  }, [])
+
+  const getHeaderVariant = () => {
+    const dietPercentage = Number(formatTotalMealsDiet(statistics))
+    return dietPercentage >= 50 ? 'primary' : 'secondary'
   }
 
   useFocusEffect(
     useCallback(() => {
-      const fetchData = async () => {
-        const meals = await getAllMeals()
-
-        const result = meals.reduce(
-          (acc: MealStatisticDTO, meal: MealDTO) => {
-            if (meal.diet === 'inside') {
-              acc.mealsInsideDiet += 1
-              acc.currentSequence += 1
-              acc.bestSequence = Math.max(acc.bestSequence, acc.currentSequence)
-            } else {
-              acc.mealsOutsideDiet += 1
-              acc.bestSequence = Math.max(acc.bestSequence, acc.currentSequence)
-              acc.currentSequence = 0
-            }
-
-            acc.totalMeals += 1
-
-            return acc
-          },
-          {
-            mealsOutsideDiet: 0,
-            mealsInsideDiet: 0,
-            totalMeals: 0,
-            currentSequence: 0,
-            bestSequence: 0,
-          } as MealStatisticDTO
-        )
-
-        setStatistics(result)
-      }
-
-      fetchData()
-    }, [])
+      fetchStatistics()
+    }, [fetchStatistics])
   )
 
   return (
     <Container>
       <ScreenHeader
         mealStatistic={statistics}
-        onNavigate={() => handleNavigate('home')}
-        variant={
-          Number(formatTotalMealsDiet(statistics)) >= 50
-            ? 'primary'
-            : 'secondary'
-        }
+        onNavigate={() => navigation.navigate('home')}
+        variant={getHeaderVariant()}
       />
 
       <Statistics>
