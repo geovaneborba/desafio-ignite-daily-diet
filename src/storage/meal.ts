@@ -3,15 +3,16 @@ import { MealDTO } from '@dtos/MealDTO'
 
 import { MEALS_COLLECTION } from './storageConfig'
 
-export async function createNewMeal(meal: MealDTO) {
+export async function createNewMeal(newMeal: MealDTO) {
   try {
     const meals = await getAllMeals()
 
     await AsyncStorage.setItem(
       MEALS_COLLECTION,
-      JSON.stringify([...meals, meal])
+      JSON.stringify([...meals, newMeal])
     )
   } catch (error) {
+    console.log('create new meal error:', error)
     throw error
   }
 }
@@ -20,9 +21,11 @@ export async function getAllMeals() {
   try {
     const storageMeals = await AsyncStorage.getItem(MEALS_COLLECTION)
 
-    const meals = storageMeals ? JSON.parse(storageMeals) : []
+    if (!storageMeals) {
+      return []
+    }
 
-    return meals
+    return JSON.parse(storageMeals) as MealDTO[]
   } catch (error) {
     throw error
   }
@@ -34,9 +37,11 @@ export async function getMealById(id: string) {
 
     const foundMeal = meals.find((meal) => meal.id === id)
 
-    if (foundMeal) {
-      return foundMeal
+    if (!foundMeal) {
+      throw new Error('Meal not found')
     }
+
+    return foundMeal
   } catch (error) {
     throw error
   }
@@ -46,30 +51,39 @@ export async function removeMealById(id: string) {
   try {
     const meals = await getAllMeals()
 
-    const storage = meals.filter((meal: MealDTO) => meal.id !== id)
+    const mealExists = meals.some((meal) => meal.id === id)
 
-    await AsyncStorage.setItem(MEALS_COLLECTION, JSON.stringify(storage))
+    if (!mealExists) {
+      throw new Error('Meal not found')
+    }
+
+    const updatedMeals = meals.filter((meal: MealDTO) => meal.id !== id)
+
+    await AsyncStorage.setItem(MEALS_COLLECTION, JSON.stringify(updatedMeals))
   } catch (error) {
     throw error
   }
 }
 
-export async function updateMealById(updateMeal: MealDTO) {
+export async function updateMealById(updateMeal: Partial<MealDTO>) {
   try {
     const meals = await getAllMeals()
 
-    const updateMeals = meals.map((meal: MealDTO) => {
-      if (meal.id === updateMeal.id) {
-        return {
-          ...updateMeal,
-          id: meal.id,
-        }
-      } else {
-        return meal
-      }
+    if (!meals.length) {
+      throw new Error('No meals to update')
+    }
+
+    if (!updateMeal.id) {
+      throw new Error('Meal ID is required for update')
+    }
+
+    const updatedMeals = meals.map((meal: MealDTO) => {
+      const updatedMeal = { ...meal, ...updateMeal, id: meal.id }
+
+      return meal.id === updateMeal.id ? updatedMeal : meal
     })
 
-    await AsyncStorage.setItem(MEALS_COLLECTION, JSON.stringify(updateMeals))
+    await AsyncStorage.setItem(MEALS_COLLECTION, JSON.stringify(updatedMeals))
   } catch (error) {
     throw error
   }
