@@ -7,7 +7,7 @@ import { UpdateMeal } from '@screens/UpdateMeal'
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 
-type RootStackParamList = {
+export type RootStackParamList = {
   home: undefined
   statistic: undefined
   registerMeal: undefined
@@ -16,14 +16,7 @@ type RootStackParamList = {
   updateMeal: { mealId: string }
 }
 
-export interface NavigationHandler {
-  <T extends keyof RootStackParamList>(
-    screenName: T,
-    params?: RootStackParamList[T]
-  ): void
-}
-
-const { Navigator, Screen } = createNativeStackNavigator<RootStackParamList>()
+const { Navigator, Screen } = createNativeStackNavigator()
 
 export function AppRoutes() {
   return (
